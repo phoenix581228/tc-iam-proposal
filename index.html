@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>慈濟慈善事業基金會 - TC-IAM 系統與資料架構演示 (V2.0)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fafaf9; /* Stone 50 */
+            color: #1c1917; /* Stone 900 */
+        }
+
+        /* Chart Utilities */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+
+        /* Navigation Styles */
+        .nav-active {
+            border-bottom: 3px solid #0d9488; /* Teal 600 */
+            color: #0f766e; /* Teal 700 */
+            font-weight: 700;
+            background-color: rgba(13, 148, 136, 0.05);
+        }
+
+        /* Tree Diagram Styles (CSS Flowchart) */
+        .tree-node {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .tree-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .connector-v {
+            width: 2px;
+            background-color: #cbd5e1; /* slate-300 */
+            margin: 0 auto;
+        }
+        .connector-h {
+            height: 2px;
+            background-color: #cbd5e1;
+            margin: 0 auto;
+        }
+        
+        /* Wizard Steps */
+        .step-active { background-color: #0d9488; color: white; border-color: #0d9488; }
+        .step-inactive { background-color: white; color: #78716c; border-color: #d6d3d1; }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f5f5f4; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-teal-700 rounded-full flex items-center justify-center text-white font-bold mr-2">慈</div>
+                    <span class="text-xl md:text-2xl font-bold text-teal-800 tracking-wider">TC-IAM</span>
+                    <span class="ml-2 text-xs text-white bg-teal-600 px-2 py-0.5 rounded-full">V2.0</span>
+                </div>
+                <div class="hidden md:flex space-x-1 items-center" id="nav-container">
+                    <button onclick="switchView('overview')" id="nav-overview" class="nav-active px-4 py-3 text-sm font-medium transition-colors">專案總覽</button>
+                    <button onclick="switchView('architecture')" id="nav-architecture" class="px-4 py-3 text-sm font-medium text-stone-500 hover:text-teal-700 hover:bg-stone-50 transition-colors">系統與資料架構</button>
+                    <button onclick="switchView('census')" id="nav-census" class="px-4 py-3 text-sm font-medium text-stone-500 hover:text-teal-700 hover:bg-stone-50 transition-colors">首要任務：普查</button>
+                    <button onclick="switchView('tech')" id="nav-tech" class="px-4 py-3 text-sm font-medium text-stone-500 hover:text-teal-700 hover:bg-stone-50 transition-colors">技術規格</button>
+                </div>
+                <!-- Mobile Menu Icon -->
+                <div class="flex items-center md:hidden">
+                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="p-2 text-stone-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden bg-stone-50 border-t border-stone-200 shadow-lg">
+            <div class="flex flex-col">
+                <button onclick="switchView('overview')" class="px-4 py-3 text-left border-b border-stone-100">專案總覽</button>
+                <button onclick="switchView('architecture')" class="px-4 py-3 text-left border-b border-stone-100">系統與資料架構</button>
+                <button onclick="switchView('census')" class="px-4 py-3 text-left border-b border-stone-100">首要任務：普查</button>
+                <button onclick="switchView('tech')" class="px-4 py-3 text-left">技術規格</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- VIEW 1: OVERVIEW -->
+        <section id="view-overview" class="animate-fade-in space-y-8">
+            <div class="text-center space-y-4 pt-4">
+                <h1 class="text-3xl md:text-5xl font-bold text-stone-800">全方位身份識別與帳號管理系統</h1>
+                <p class="text-stone-500 text-sm">提案單位：文史處 AI應用開發組 | 日期：2025-12-01</p>
+                <p class="max-w-4xl mx-auto text-lg text-stone-600 leading-relaxed">
+                    透過 <strong>Keycloak + LDAP</strong> 打造統一身份中台，實現「人 (Member)」與「身份 (Identity)」的解耦，
+                    解決多重角色管理難題，為慈濟數位大數據奠定基礎。
+                </p>
+            </div>
+
+            <!-- Dashboard Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-teal-500">
+                    <div class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">SSO</div>
+                    <div class="font-bold text-xl text-stone-800">統一入口</div>
+                    <p class="text-sm text-stone-500 mt-2">Gmail / 手機號 雙軌註冊登入</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <div class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Unique ID</div>
+                    <div class="font-bold text-xl text-stone-800">唯一識別</div>
+                    <p class="text-sm text-stone-500 mt-2">LDAP 配發 TC-UID 永不重複</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-500">
+                    <div class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">One Member</div>
+                    <div class="font-bold text-xl text-stone-800">個資歸戶</div>
+                    <p class="text-sm text-stone-500 mt-2">自然人資料唯一，不重複建檔</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-orange-500">
+                    <div class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Segmentation</div>
+                    <div class="font-bold text-xl text-stone-800">業務分眾</div>
+                    <p class="text-sm text-stone-500 mt-2">志工/職工/捐款者 權限精細分流</p>
+                </div>
+            </div>
+
+            <!-- Why Needed Chart -->
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 md:p-8">
+                <div class="flex flex-col md:flex-row items-center gap-8">
+                    <div class="md:w-1/3 space-y-4">
+                        <h3 class="text-2xl font-bold text-stone-800">為什麼需要身份分流？</h3>
+                        <p class="text-stone-600">
+                            目前系統中，一位師兄可能同時是「榮董」、「慈誠」與「真善美志工」。
+                            若不進行分層管理，資料將混雜難以維護。
+                        </p>
+                        <div class="bg-stone-50 p-4 rounded text-sm text-stone-600">
+                            <strong>現況痛點：</strong> 職工離職後，往往連同捐款者或志工的權限一起被刪除，或保留了不該保留的行政權限。
+                        </div>
+                    </div>
+                    <div class="md:w-2/3 w-full">
+                        <div class="chart-container">
+                            <canvas id="identityOverlapChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: ARCHITECTURE (Enhanced) -->
+        <section id="view-architecture" class="hidden space-y-8">
+            
+            <!-- Tab Switcher for Architecture -->
+            <div class="flex justify-center space-x-4 mb-6">
+                <button onclick="toggleArchView('diagram')" id="btn-diagram" class="px-6 py-2 rounded-full bg-teal-600 text-white font-bold shadow transition">資料結構圖 (會員分流)</button>
+                <button onclick="toggleArchView('system')" id="btn-system" class="px-6 py-2 rounded-full bg-stone-200 text-stone-600 font-bold hover:bg-stone-300 transition">微服務系統架構</button>
+            </div>
+
+            <!-- 2A: Member Data Structure Diagram (Visual Tree) -->
+            <div id="arch-diagram" class="animate-fade-in">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-stone-800">三層式資料分流架構</h2>
+                    <p class="text-stone-500">從最大的「自然人」到最細的「業務屬性」，層層遞進，權限不混淆。</p>
+                </div>
+
+                <div class="overflow-x-auto pb-8">
+                    <div class="min-w-[800px] flex flex-col items-center">
+                        
+                        <!-- Level 1: Member Center -->
+                        <div class="tree-node bg-white border-2 border-teal-600 rounded-xl p-6 shadow-lg w-96 text-center z-10">
+                            <div class="text-xs font-bold text-teal-600 uppercase tracking-widest mb-1">Level 1: 核心層</div>
+                            <h3 class="text-xl font-bold text-stone-800">會員中心 (Member Center)</h3>
+                            <p class="text-sm text-stone-500 mt-2">自然人唯一歸戶 (TC-UID)</p>
+                            <div class="mt-3 flex justify-center gap-2 text-xs text-stone-400">
+                                <span class="bg-stone-100 px-2 py-1 rounded">姓名</span>
+                                <span class="bg-stone-100 px-2 py-1 rounded">手機</span>
+                                <span class="bg-stone-100 px-2 py-1 rounded">身分證(加密)</span>
+                            </div>
+                        </div>
+
+                        <!-- Connector 1 -->
+                        <div class="connector-v h-12"></div>
+
+                        <!-- Level 2: Identity Center -->
+                        <div class="tree-node bg-white border-2 border-blue-500 rounded-xl p-4 shadow-md w-80 text-center z-10 relative">
+                            <div class="absolute -left-32 top-1/2 transform -translate-y-1/2 bg-stone-100 px-3 py-1 rounded text-xs text-stone-500 hidden md:block">身份路由與派發</div>
+                            <div class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">Level 2: 身份層</div>
+                            <h3 class="text-lg font-bold text-stone-800">身份中心 (Identity Center)</h3>
+                            <p class="text-xs text-stone-500">擁有多重角色 (Role-Based)</p>
+                        </div>
+
+                        <!-- Connector Split -->
+                        <div class="connector-v h-8"></div>
+                        <div class="flex justify-center w-full max-w-4xl relative">
+                            <div class="border-t-2 border-stone-300 absolute top-0 w-3/4"></div> <!-- Horizontal Line -->
+                        </div>
+                        <div class="flex justify-between w-full max-w-4xl px-4 md:px-16 pt-0">
+                            <div class="connector-v h-8"></div> <!-- Left Leg -->
+                            <div class="connector-v h-8"></div> <!-- Center Leg -->
+                            <div class="connector-v h-8"></div> <!-- Right Leg -->
+                        </div>
+
+                        <!-- Level 3: Business Segmentation -->
+                        <div class="flex justify-between w-full max-w-5xl gap-4">
+                            
+                            <!-- Branch A: Staff -->
+                            <div class="flex flex-col items-center w-1/3">
+                                <div class="tree-node bg-stone-50 border border-stone-300 rounded-lg p-4 w-full shadow-sm">
+                                    <div class="text-xs font-bold text-stone-500 mb-1">職工身份</div>
+                                    <h4 class="font-bold text-stone-800">職工管理模組</h4>
+                                    <ul class="text-xs text-stone-600 mt-2 text-left space-y-1 list-disc pl-4">
+                                        <li>HR 系統連動</li>
+                                        <li>職務權限</li>
+                                        <li>行政簽核權</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Branch B: Volunteer (The most complex) -->
+                            <div class="flex flex-col items-center w-1/3">
+                                <div class="tree-node bg-teal-50 border border-teal-300 rounded-lg p-4 w-full shadow-md">
+                                    <div class="text-xs font-bold text-teal-600 mb-1">志工身份</div>
+                                    <h4 class="font-bold text-teal-900">志工管理模組</h4>
+                                    <div class="mt-2 text-xs text-left bg-white p-2 rounded border border-teal-100">
+                                        <strong>業務分眾 (Sub-segmentation):</strong>
+                                        <ul class="mt-1 space-y-1">
+                                            <li class="flex items-center"><span class="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>真善美: 著作權同意書</li>
+                                            <li class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>環保: 環保證號、排班</li>
+                                            <li class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>訪視: 個資授權書</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Branch C: Donor -->
+                            <div class="flex flex-col items-center w-1/3">
+                                <div class="tree-node bg-orange-50 border border-orange-200 rounded-lg p-4 w-full shadow-sm">
+                                    <div class="text-xs font-bold text-orange-600 mb-1">捐款者身份</div>
+                                    <h4 class="font-bold text-orange-900">捐款管理模組</h4>
+                                    <ul class="text-xs text-stone-600 mt-2 text-left space-y-1 list-disc pl-4">
+                                        <li>個人: 年度報稅歸戶</li>
+                                        <li>企業: 主帳號/財務權限</li>
+                                        <li>定期定額: 信用卡Token</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2B: System Architecture (Interactive Stack) -->
+            <div id="arch-system" class="hidden animate-fade-in grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Interactive Diagram Area -->
+                <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-xl font-bold text-stone-800 mb-4">系統層級架構圖</h2>
+                    <div class="flex flex-col space-y-4 relative">
+                        <!-- Layer 1: Auth -->
+                        <button onclick="showArchDetail('auth')" class="w-full bg-slate-800 text-white p-3 rounded-lg shadow hover:bg-slate-700 transition text-center border-l-4 border-slate-500">
+                            <div class="font-bold">Layer 1: 認證層 (Authentication)</div>
+                            <div class="text-xs text-slate-300">Keycloak SSO / SMS OTP</div>
+                        </button>
+                        
+                        <!-- Layer 2: Directory -->
+                        <button onclick="showArchDetail('dir')" class="w-full bg-slate-700 text-white p-3 rounded-lg shadow hover:bg-slate-600 transition text-center border-l-4 border-slate-400">
+                            <div class="font-bold">Layer 2: 目錄服務層 (Directory)</div>
+                            <div class="text-xs text-slate-300">OpenLDAP / TC-UID</div>
+                        </button>
+
+                        <!-- Layer 3: Member -->
+                        <button onclick="showArchDetail('member')" class="w-full bg-teal-600 text-white p-3 rounded-lg shadow hover:bg-teal-500 transition text-center border-l-4 border-teal-300">
+                            <div class="font-bold">Layer 3: 會員中心 (Member Center)</div>
+                            <div class="text-xs text-teal-100">自然人歸戶資料</div>
+                        </button>
+
+                        <!-- Layer 4: Identity -->
+                        <button onclick="showArchDetail('identity')" class="w-full bg-teal-700 text-white p-3 rounded-lg shadow hover:bg-teal-600 transition text-center border-l-4 border-teal-400">
+                            <div class="font-bold">Layer 4: 身份中心 (Identity Center)</div>
+                            <div class="text-xs text-teal-100">角色判斷 (Who are you?)</div>
+                        </button>
+
+                        <!-- Layer 5: Business (Split) -->
+                        <div class="border-2 border-dashed border-stone-300 p-2 rounded-lg bg-stone-50">
+                            <div class="text-center text-xs font-bold text-stone-500 mb-2 uppercase tracking-wide">Layer 5: 業務分眾管理 (Business Segmentation)</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="showArchDetail('vol')" class="bg-white p-2 rounded border border-teal-200 hover:border-teal-500 hover:text-teal-700 text-sm font-bold text-stone-600 shadow-sm transition">
+                                    A. 志工分眾
+                                </button>
+                                <button onclick="showArchDetail('staff')" class="bg-white p-2 rounded border border-stone-200 hover:border-stone-400 text-sm font-bold text-stone-600 shadow-sm transition">
+                                    B. 職工分眾
+                                </button>
+                                <button onclick="showArchDetail('donor')" class="bg-white p-2 rounded border border-orange-200 hover:border-orange-400 hover:text-orange-700 text-sm font-bold text-stone-600 shadow-sm transition">
+                                    C. 捐款分眾
+                                </button>
+                                <button onclick="showArchDetail('legal')" class="bg-white p-2 rounded border border-red-200 hover:border-red-400 hover:text-red-700 text-sm font-bold text-stone-600 shadow-sm transition">
+                                    D. 法律合規
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel -->
+                <div class="lg:col-span-5">
+                    <div id="arch-detail-panel" class="bg-stone-50 h-full p-6 rounded-xl border border-stone-200">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <span class="text-2xl">ℹ️</span>
+                            <h3 id="detail-title" class="text-lg font-bold text-stone-800">規格說明</h3>
+                        </div>
+                        <div id="detail-content" class="text-stone-600 text-sm leading-relaxed space-y-4">
+                            <p>請點選左側架構圖的各層級，以查看詳細的業務邏輯與技術規範。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: CENSUS (PRIORITY) -->
+        <section id="view-census" class="hidden space-y-8">
+            <div class="bg-teal-50 border-l-4 border-teal-600 p-4 rounded-r">
+                <h2 class="text-xl font-bold text-teal-900 flex items-center">
+                    <span class="mr-2">🚀</span> 首要任務：志工普查系統
+                </h2>
+                <p class="text-teal-700 text-sm mt-1">暫緩全面開發，優先進行全體志工三層資料建檔。</p>
+            </div>
+
+            <!-- Census Wizard -->
+            <div class="bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden max-w-4xl mx-auto">
+                <div class="bg-stone-50 px-6 py-4 border-b border-stone-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs font-bold text-stone-400 uppercase">Step <span id="wizard-step-num">1</span> of 4</span>
+                        <div class="text-lg font-bold text-stone-800" id="wizard-step-title">會員基礎資料</div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <div id="ind-1" class="w-3 h-3 rounded-full step-active"></div>
+                        <div id="ind-2" class="w-3 h-3 rounded-full step-inactive border"></div>
+                        <div id="ind-3" class="w-3 h-3 rounded-full step-inactive border"></div>
+                        <div id="ind-4" class="w-3 h-3 rounded-full step-inactive border"></div>
+                    </div>
+                </div>
+
+                <div class="p-8 min-h-[400px]">
+                    <!-- Step 1 -->
+                    <div id="step-1" class="wizard-step space-y-6">
+                        <p class="text-stone-600 text-sm bg-stone-100 p-2 rounded"><strong>Layer 1 目標：</strong>建立唯一的「自然人」檔案，配發 TC-UID。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="label-text">真實姓名</label>
+                                <input type="text" value="陳慈濟" class="input-field bg-stone-50" readonly>
+                            </div>
+                            <div>
+                                <label class="label-text">Google 帳號 (限定)</label>
+                                <input type="email" value="tzuchi.chen@gmail.com" class="input-field bg-stone-50" readonly>
+                            </div>
+                            <div>
+                                <label class="label-text">手機號碼 (OTP 驗證)</label>
+                                <input type="tel" value="0912-345-678" class="input-field bg-stone-50" readonly>
+                            </div>
+                            <div>
+                                <label class="label-text">身分證號 (加密)</label>
+                                <input type="text" value="A123*****9" class="input-field bg-stone-50" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div id="step-2" class="wizard-step hidden space-y-6">
+                        <p class="text-stone-600 text-sm bg-stone-100 p-2 rounded"><strong>Layer 2 目標：</strong>確認組織內的身份與職級。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="col-span-2">
+                                <label class="label-text mb-2 block">志工類別</label>
+                                <div class="flex gap-4">
+                                    <span class="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm font-bold">委員</span>
+                                    <span class="px-3 py-1 bg-stone-100 text-stone-500 rounded-full text-sm">慈誠</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="label-text">委員號</label>
+                                <input type="text" class="input-field" placeholder="請輸入證號">
+                            </div>
+                            <div>
+                                <label class="label-text">法號</label>
+                                <input type="text" class="input-field" placeholder="請輸入法號">
+                            </div>
+                            <div>
+                                <label class="label-text">受證年份</label>
+                                <select class="input-field"><option>2020</option></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div id="step-3" class="wizard-step hidden space-y-6">
+                        <p class="text-stone-600 text-sm bg-stone-100 p-2 rounded"><strong>Layer 3 目標：</strong>確認業務屬性、組織歸屬與法律簽署。</p>
+                        <div class="bg-amber-50 p-3 rounded text-amber-800 text-sm font-bold border border-amber-200">
+                            需經 合心/和氣組隊長 審核
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="label-text">四合一歸屬</label>
+                                <div class="flex gap-2">
+                                    <select class="input-field w-1/4"><option>北區</option></select>
+                                    <select class="input-field w-1/4"><option>合心</option></select>
+                                    <select class="input-field w-1/4"><option>和氣</option></select>
+                                    <select class="input-field w-1/4"><option>互愛</option></select>
+                                </div>
+                            </div>
+                            <div class="col-span-2 border-t pt-4">
+                                <label class="label-text mb-2 block">功能分組與同意書</label>
+                                <div class="space-y-3">
+                                    <label class="flex items-center p-3 border rounded hover:bg-stone-50 cursor-pointer">
+                                        <input type="checkbox" id="chk-art" class="mr-3 h-5 w-5 text-teal-600" onchange="toggleLegal('art')">
+                                        <span>真善美志工 (需簽署著作權同意書)</span>
+                                    </label>
+                                    <div id="legal-art" class="hidden ml-8 p-3 bg-stone-50 text-xs text-stone-500 rounded border">
+                                        <p class="mb-2"><strong>著作權同意書預覽...</strong> (點點簽整合)</p>
+                                        <button class="px-3 py-1 bg-stone-200 rounded text-stone-700 hover:bg-stone-300">數位簽署</button>
+                                    </div>
+
+                                    <label class="flex items-center p-3 border rounded hover:bg-stone-50 cursor-pointer">
+                                        <input type="checkbox" id="chk-visit" class="mr-3 h-5 w-5 text-teal-600" onchange="toggleLegal('visit')">
+                                        <span>訪視志工 (需簽署個資保密協定)</span>
+                                    </label>
+                                     <div id="legal-visit" class="hidden ml-8 p-3 bg-stone-50 text-xs text-stone-500 rounded border">
+                                        <p class="mb-2"><strong>個資保密協定預覽...</strong> (點點簽整合)</p>
+                                        <button class="px-3 py-1 bg-stone-200 rounded text-stone-700 hover:bg-stone-300">數位簽署</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div id="step-4" class="wizard-step hidden text-center pt-10 space-y-6">
+                        <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto">✓</div>
+                        <h3 class="text-2xl font-bold text-stone-800">資料已送出審核</h3>
+                        <p class="text-stone-600">您的 TC-UID 已生成：<span class="font-mono font-bold text-teal-700">TC2025120001</span></p>
+                        <button onclick="resetWizard()" class="text-teal-600 underline text-sm">重新測試</button>
+                    </div>
+                </div>
+
+                <div class="bg-stone-50 px-6 py-4 border-t border-stone-200 flex justify-between">
+                    <button id="btn-prev" onclick="changeStep(-1)" class="px-4 py-2 border rounded text-stone-600 hover:bg-white disabled:opacity-50" disabled>上一步</button>
+                    <button id="btn-next" onclick="changeStep(1)" class="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 font-bold">下一步</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: TECH -->
+        <section id="view-tech" class="hidden space-y-8">
+            <h2 class="text-2xl font-bold text-stone-800">技術規格 (Technology Stack)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                    <h3 class="font-bold text-stone-800 mb-4 border-b pb-2">後端與數據</h3>
+                    <ul class="space-y-3 text-sm text-stone-600">
+                        <li class="flex justify-between"><span>Identity Provider</span> <span class="font-mono bg-stone-100 px-2 rounded">Keycloak</span></li>
+                        <li class="flex justify-between"><span>Directory</span> <span class="font-mono bg-stone-100 px-2 rounded">OpenLDAP</span></li>
+                        <li class="flex justify-between"><span>Database</span> <span class="font-mono bg-stone-100 px-2 rounded">PostgreSQL (JSONB/PGVector)</span></li>
+                        <li class="flex justify-between"><span>API Framework</span> <span class="font-mono bg-stone-100 px-2 rounded">Spring Boot / NestJS</span></li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                    <h3 class="font-bold text-stone-800 mb-4 border-b pb-2">業務整合與前端</h3>
+                    <ul class="space-y-3 text-sm text-stone-600">
+                        <li class="flex justify-between"><span>E-Signature</span> <span class="font-mono bg-teal-50 text-teal-700 px-2 rounded font-bold">點點簽 (DottedSign)</span></li>
+                        <li class="flex justify-between"><span>Frontend</span> <span class="font-mono bg-stone-100 px-2 rounded">Angular / React</span></li>
+                        <li class="flex justify-between"><span>Cache</span> <span class="font-mono bg-stone-100 px-2 rounded">Redis</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-stone-200 mt-auto py-6 text-center text-sm text-stone-400">
+        &copy; 2025 Tzu Chi Charity Foundation. Internal Proposal V2.0
+    </footer>
+
+    <script>
+        // --- Navigation Logic ---
+        function switchView(viewId) {
+            ['overview', 'architecture', 'census', 'tech'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+                const btn = document.getElementById(`nav-${id}`);
+                btn.classList.remove('nav-active', 'text-teal-700', 'bg-teal-50');
+                btn.classList.add('text-stone-500');
+            });
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${viewId}`);
+            activeBtn.classList.add('nav-active', 'text-teal-700');
+            activeBtn.classList.remove('text-stone-500');
+        }
+
+        // --- Architecture View Toggles ---
+        function toggleArchView(type) {
+            const diag = document.getElementById('arch-diagram');
+            const sys = document.getElementById('arch-system');
+            const btnDiag = document.getElementById('btn-diagram');
+            const btnSys = document.getElementById('btn-system');
+
+            if(type === 'diagram') {
+                diag.classList.remove('hidden');
+                sys.classList.add('hidden');
+                btnDiag.classList.replace('bg-stone-200', 'bg-teal-600');
+                btnDiag.classList.replace('text-stone-600', 'text-white');
+                btnSys.classList.replace('bg-teal-600', 'bg-stone-200');
+                btnSys.classList.replace('text-white', 'text-stone-600');
+            } else {
+                diag.classList.add('hidden');
+                sys.classList.remove('hidden');
+                btnSys.classList.replace('bg-stone-200', 'bg-teal-600');
+                btnSys.classList.replace('text-stone-600', 'text-white');
+                btnDiag.classList.replace('bg-teal-600', 'bg-stone-200');
+                btnDiag.classList.replace('text-white', 'text-stone-600');
+            }
+        }
+
+        // --- Architecture Details ---
+        const archDetails = {
+            'auth': { title: '1. 認證層', content: 'Keycloak SSO, Gmail OAuth, OTP 驗證。負責「你是誰」。' },
+            'dir': { title: '2. 目錄層', content: 'OpenLDAP 儲存組織結構與配發 TC-UID 唯一碼。' },
+            'member': { title: '3. 會員中心', content: '自然人資料歸戶 (姓名/身分證/手機)。Write Once 原則。' },
+            'identity': { title: '4. 身份中心', content: '角色路由 (Role-Based)。判定該用戶是 志工、職工 還是 捐款者。' },
+            'vol': { title: '5A. 志工分眾', content: '管理：真善美/環保/訪視等屬性。紀錄：受證、法號、時數。' },
+            'staff': { title: '5B. 職工分眾', content: '與 HR 系統連動。職工離職後，自動切斷此層權限，但不影響會員層。' },
+            'donor': { title: '5C. 捐款分眾', content: '個人(報稅)、企業(B2B)、定期定額管理。' },
+            'legal': { title: '5D. 法律合規', content: '整合點點簽 (DottedSign)。線上簽署著作權/個資同意書，狀態連動權限。' }
+        };
+
+        function showArchDetail(key) {
+            const title = document.getElementById('detail-title');
+            const content = document.getElementById('detail-content');
+            title.innerText = archDetails[key].title;
+            content.innerText = archDetails[key].content;
+        }
+
+        // --- Wizard Logic ---
+        let currentStep = 1;
+        function changeStep(dir) {
+            currentStep += dir;
+            if(currentStep > 4) currentStep = 4;
+            if(currentStep < 1) currentStep = 1;
+            
+            // UI Updates
+            for(let i=1; i<=4; i++) {
+                document.getElementById(`step-${i}`).classList.add('hidden');
+                const ind = document.getElementById(`ind-${i}`);
+                if(i <= currentStep) {
+                    ind.classList.remove('step-inactive', 'border');
+                    ind.classList.add('step-active');
+                } else {
+                    ind.classList.remove('step-active');
+                    ind.classList.add('step-inactive', 'border');
+                }
+            }
+            document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+            document.getElementById('wizard-step-num').innerText = currentStep;
+            
+            const titles = ['會員基礎資料', '身份職級確認', '業務屬性與歸屬', '完成'];
+            document.getElementById('wizard-step-title').innerText = titles[currentStep-1];
+
+            document.getElementById('btn-prev').disabled = (currentStep === 1);
+            if(currentStep === 4) {
+                document.getElementById('btn-next').classList.add('hidden');
+                document.getElementById('btn-prev').classList.add('hidden');
+            } else {
+                document.getElementById('btn-next').classList.remove('hidden');
+                document.getElementById('btn-prev').classList.remove('hidden');
+                document.getElementById('btn-next').innerText = (currentStep === 3) ? '提交審核' : '下一步';
+            }
+        }
+
+        function toggleLegal(type) {
+            const el = document.getElementById(`legal-${type}`);
+            const chk = document.getElementById(`chk-${type}`);
+            if(chk.checked) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        function resetWizard() {
+            currentStep = 0; 
+            changeStep(1);
+        }
+
+        // --- Chart Init ---
+        const ctx = document.getElementById('identityOverlapChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['一般會員', '僅捐款', '僅志工', '志工+捐款', '職工+志工'],
+                datasets: [{
+                    label: '身份複雜度 (需管理屬性數)',
+                    data: [1, 3, 5, 8, 12],
+                    backgroundColor: ['#e7e5e4', '#d6d3d1', '#5eead4', '#0d9488', '#134e4a'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: {display: false} },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        // Common styles
+        const inputClass = "w-full border-stone-300 rounded-md shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500";
+        document.querySelectorAll('.input-field').forEach(el => el.className += " " + inputClass);
+        document.querySelectorAll('.label-text').forEach(el => el.className = "block text-sm font-medium text-stone-700 mb-1");
+
+    </script>
+</body>
+</html>
